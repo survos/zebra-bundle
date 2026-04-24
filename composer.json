@@ -1,0 +1,40 @@
+{
+    "name": "survos/zebra-bundle",
+    "description": "Symfony bundle for Zebra ZPL preview and printing workflows",
+    "license": "MIT",
+    "type": "symfony-bundle",
+    "require": {
+        "php": "^8.4",
+        "psr/cache": "^3.0",
+        "symfony/cache": "^7.4||^8.0",
+        "symfony/config": "^7.4||^8.0",
+        "symfony/dependency-injection": "^7.4||^8.0",
+        "symfony/framework-bundle": "^7.4||^8.0",
+        "symfony/http-client": "^7.4||^8.0",
+        "symfony/http-kernel": "^7.4||^8.0",
+        "symfony/twig-bundle": "^7.4||^8.0"
+    },
+    "suggest": {
+        "symfony/ux-twig-component": "Required for the bundled Zebra preview Twig component"
+    },
+    "autoload": {
+        "psr-4": {
+            "Survos\\ZebraBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Survos\\ZebraBundle\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "symfony": {
+            "bundle": "Survos\\ZebraBundle\\SurvosZebraBundle",
+            "keywords": [
+                "twig-component"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

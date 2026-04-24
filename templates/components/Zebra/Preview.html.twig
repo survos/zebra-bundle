@@ -1,0 +1,17 @@
+{% set preview = this.preview %}
+
+<div class="zebra-preview-component">
+    <img
+        src="{{ preview.toDataUri }}"
+        alt="{{ this.alt }}"
+        class="zebra-preview-component__image"
+    >
+
+    {% if this.showWarnings and preview.warnings is not empty %}
+        <div class="zebra-preview-component__warnings">
+            {% for warning in preview.warnings %}
+                <span class="zebra-preview-component__warning">{{ warning }}</span>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
