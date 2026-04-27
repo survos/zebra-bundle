@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Survos\ZebraBundle;
 
 use Survos\ZebraBundle\LabelSize\LabelSizeRegistry;
+use Survos\ZebraBundle\Print\PrinterRegistry;
+use Survos\ZebraBundle\Print\PrinterService;
+use Survos\ZebraBundle\Print\PrinterServiceInterface;
 use Survos\ZebraBundle\Preview\LabelaryClient;
 use Survos\ZebraBundle\Preview\PreviewService;
 use Survos\ZebraBundle\Preview\PreviewServiceInterface;
@@ -94,14 +97,14 @@ final class SurvosZebraBundle extends AbstractBundle
     {
         $services = $container->services();
         $defaults = $config['defaults'];
-        $labelSizes = LabelSizeRegistry::buildDefinitions(
+
+        if (!LabelSizeRegistry::hasName(
+            $defaults['label_size'],
             $config['label_sizes'],
             $defaults['width_inches'],
             $defaults['height_inches'],
             $defaults['dpmm'],
-        );
-
-        if (!isset($labelSizes[$defaults['label_size']])) {
+        )) {
             throw new \InvalidArgumentException(sprintf('Unknown default Zebra label size "%s".', $defaults['label_size']));
         }
 
@@ -133,11 +136,34 @@ final class SurvosZebraBundle extends AbstractBundle
         $services
             ->set(LabelSizeRegistry::class)
             ->args([
-                $labelSizes,
+                $config['label_sizes'],
                 $defaults['label_size'],
+                $defaults['width_inches'],
+                $defaults['height_inches'],
+                $defaults['dpmm'],
             ])
             ->autowire()
             ->autoconfigure();
+
+        $services
+            ->set(PrinterRegistry::class)
+            ->args([
+                $config['printers'],
+                $config['default_printer'],
+            ])
+            ->autowire()
+            ->autoconfigure();
+
+        $services
+            ->set(PrinterService::class)
+            ->args([
+                new Reference(PrinterRegistry::class),
+            ])
+            ->autowire()
+            ->autoconfigure();
+
+        $services
+            ->alias(PrinterServiceInterface::class, PrinterService::class);
 
         $services
             ->set(ZebraExtension::class)

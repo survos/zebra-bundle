@@ -7,13 +7,27 @@ namespace Survos\ZebraBundle\LabelSize;
 final readonly class LabelSizeRegistry
 {
     /**
-     * @param array<string, LabelSizeDefinition> $labelSizes
+     * @param array<string, array{width_inches: float|int, height_inches: float|int, dpmm?: int, description?: string|null}> $customLabelSizes
      */
     public function __construct(
-        private array $labelSizes,
+        array $customLabelSizes,
         private ?string $defaultLabelSize = null,
+        float $fallbackWidthInches = 4.0,
+        float $fallbackHeightInches = 2.0,
+        int $fallbackDpmm = 8,
     ) {
+        $this->labelSizes = self::buildDefinitions(
+            $customLabelSizes,
+            $fallbackWidthInches,
+            $fallbackHeightInches,
+            $fallbackDpmm,
+        );
     }
+
+    /**
+     * @var array<string, LabelSizeDefinition>
+     */
+    private array $labelSizes;
 
     public function getDefault(): ?LabelSizeDefinition
     {
@@ -39,6 +53,21 @@ final readonly class LabelSizeRegistry
     public function all(): array
     {
         return $this->labelSizes;
+    }
+
+    public static function hasName(
+        string $name,
+        array $customLabelSizes,
+        float $fallbackWidthInches,
+        float $fallbackHeightInches,
+        int $fallbackDpmm,
+    ): bool {
+        return isset(self::buildDefinitions(
+            $customLabelSizes,
+            $fallbackWidthInches,
+            $fallbackHeightInches,
+            $fallbackDpmm,
+        )[$name]);
     }
 
     /**
