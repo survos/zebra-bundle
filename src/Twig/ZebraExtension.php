@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Survos\ZebraBundle\Twig;
 
+use Survos\ZebraBundle\LabelSize\LabelSizeRegistry;
 use Survos\ZebraBundle\Preview\PreviewRequest;
 use Survos\ZebraBundle\Preview\PreviewServiceInterface;
 use Twig\Extension\AbstractExtension;
@@ -13,6 +14,7 @@ final class ZebraExtension extends AbstractExtension
 {
     public function __construct(
         private readonly PreviewServiceInterface $previewService,
+        private readonly LabelSizeRegistry $labelSizeRegistry,
         private readonly int $defaultDpmm,
         private readonly float $defaultWidthInches,
         private readonly float $defaultHeightInches,
@@ -29,28 +31,34 @@ final class ZebraExtension extends AbstractExtension
 
     public function zplPreview(
         string $zpl,
-        ?float $width = null,
+        string|float|null $width = null,
         ?float $height = null,
         ?int $dpmm = null,
         string $format = 'png',
         int $index = 0,
+        ?string $labelSize = null,
     ): string {
-        return $this->zplPreviewResult($zpl, $width, $height, $dpmm, $format, $index)->toDataUri();
+        return $this->zplPreviewResult($zpl, $width, $height, $dpmm, $format, $index, $labelSize)->toDataUri();
     }
 
     public function zplPreviewResult(
         string $zpl,
-        ?float $width = null,
+        string|float|null $width = null,
         ?float $height = null,
         ?int $dpmm = null,
         string $format = 'png',
         int $index = 0,
+        ?string $labelSize = null,
     ): \Survos\ZebraBundle\Preview\PreviewResult {
+        $resolvedLabelSize = \is_string($width) ? $width : $labelSize;
+        $definition = $resolvedLabelSize ? $this->labelSizeRegistry->get($resolvedLabelSize) : $this->labelSizeRegistry->getDefault();
+        $resolvedWidth = \is_string($width) ? null : $width;
+
         return $this->previewService->preview(new PreviewRequest(
             zpl: $zpl,
-            widthInches: $width ?? $this->defaultWidthInches,
-            heightInches: $height ?? $this->defaultHeightInches,
-            dpmm: $dpmm ?? $this->defaultDpmm,
+            widthInches: $resolvedWidth ?? $definition?->widthInches ?? $this->defaultWidthInches,
+            heightInches: $height ?? $definition?->heightInches ?? $this->defaultHeightInches,
+            dpmm: $dpmm ?? $definition?->dpmm ?? $this->defaultDpmm,
             format: $format,
             index: $index,
         ));

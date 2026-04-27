@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Survos\ZebraBundle;
 
+use Survos\ZebraBundle\LabelSize\LabelSizeRegistry;
 use Survos\ZebraBundle\Preview\LabelaryClient;
 use Survos\ZebraBundle\Preview\PreviewService;
 use Survos\ZebraBundle\Preview\PreviewServiceInterface;
@@ -40,12 +41,41 @@ final class SurvosZebraBundle extends AbstractBundle
                 ->arrayNode('defaults')
                     ->addDefaultsIfNotSet()
                     ->children()
+                        ->scalarNode('label_size')->defaultValue('default')->end()
                         ->integerNode('dpmm')->defaultValue(8)->end()
                         ->floatNode('width_inches')->defaultValue(4.0)->end()
                         ->floatNode('height_inches')->defaultValue(2.0)->end()
                         ->enumNode('format')->values(['png', 'pdf', 'json'])->defaultValue('png')->end()
                     ->end()
                 ->end()
+                ->arrayNode('label_sizes')
+                    ->useAttributeAsKey('name')
+                    ->arrayPrototype()
+                        ->children()
+                            ->floatNode('width_inches')->isRequired()->end()
+                            ->floatNode('height_inches')->isRequired()->end()
+                            ->integerNode('dpmm')->defaultValue(8)->end()
+                            ->scalarNode('description')->defaultNull()->end()
+                        ->end()
+                    ->end()
+                ->end()
+                ->arrayNode('printers')
+                    ->useAttributeAsKey('name')
+                    ->arrayPrototype()
+                        ->children()
+                            ->enumNode('type')->values(['tcp', 'cups', 'browserprint', 'file', 'null', 'usb'])->defaultValue('tcp')->end()
+                            ->scalarNode('host')->defaultNull()->end()
+                            ->integerNode('port')->defaultValue(9100)->end()
+                            ->floatNode('timeout')->defaultValue(5.0)->end()
+                            ->scalarNode('queue')->defaultNull()->end()
+                            ->scalarNode('path')->defaultNull()->end()
+                            ->scalarNode('device')->defaultNull()->end()
+                            ->scalarNode('vendor_id')->defaultNull()->end()
+                            ->scalarNode('product_id')->defaultNull()->end()
+                        ->end()
+                    ->end()
+                ->end()
+                ->scalarNode('default_printer')->defaultNull()->end()
             ->end();
     }
 
@@ -64,6 +94,16 @@ final class SurvosZebraBundle extends AbstractBundle
     {
         $services = $container->services();
         $defaults = $config['defaults'];
+        $labelSizes = LabelSizeRegistry::buildDefinitions(
+            $config['label_sizes'],
+            $defaults['width_inches'],
+            $defaults['height_inches'],
+            $defaults['dpmm'],
+        );
+
+        if (!isset($labelSizes[$defaults['label_size']])) {
+            throw new \InvalidArgumentException(sprintf('Unknown default Zebra label size "%s".', $defaults['label_size']));
+        }
 
         $services
             ->set(LabelaryClient::class)
@@ -91,9 +131,19 @@ final class SurvosZebraBundle extends AbstractBundle
             ->alias(PreviewServiceInterface::class, PreviewService::class);
 
         $services
+            ->set(LabelSizeRegistry::class)
+            ->args([
+                $labelSizes,
+                $defaults['label_size'],
+            ])
+            ->autowire()
+            ->autoconfigure();
+
+        $services
             ->set(ZebraExtension::class)
             ->args([
                 new Reference(PreviewServiceInterface::class),
+                new Reference(LabelSizeRegistry::class),
                 $defaults['dpmm'],
                 $defaults['width_inches'],
                 $defaults['height_inches'],
@@ -115,6 +165,7 @@ final class SurvosZebraBundle extends AbstractBundle
                 ->set(PreviewComponent::class)
                 ->args([
                     new Reference(PreviewServiceInterface::class),
+                    new Reference(LabelSizeRegistry::class),
                     $defaults['dpmm'],
                     $defaults['width_inches'],
                     $defaults['height_inches'],
