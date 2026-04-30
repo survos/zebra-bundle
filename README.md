@@ -13,6 +13,7 @@ Implemented so far:
 - Labelary-backed preview client and cache wrapper
 - Twig extension with `zpl_preview()` support
 - Optional Twig component for label preview
+- TCP, CUPS, file, USB, and null print transports
 
 ## Configuration
 
@@ -39,11 +40,24 @@ survos_zebra:
       dpmm: 8
       description: 'Zebra GK420d 2.25 x 1.25 inch label'
   printers:
-    kiosk-usb:
-      type: usb
-      device: /dev/usb/lp0
-      vendor_id: '0A5F'
-      product_id: '00A1'
+    zebra:
+      type: cups
+      queue: zebra
+    spool:
+      type: file
+      path: '%kernel.project_dir%/var/zpl'
+  default_printer: zebra
+```
+
+For USB-attached GK420d printers on Linux, prefer a CUPS queue that uses the CUPS USB
+backend, for example `usb://Zebra/...`, then print with `type: cups`. Avoid writing
+directly to `/dev/usb/lp*`; that path depends on `usblp` and can leave transport and
+interpreter failures hard to distinguish. See [docs/gk420d-reliable-printing.md](docs/gk420d-reliable-printing.md).
+
+The print service automatically prepends the ZPL interpreter guard:
+
+```zpl
+^XA^SZ2^XZ
 ```
 
 ## Twig Usage
