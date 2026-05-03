@@ -4,18 +4,76 @@ declare(strict_types=1);
 
 namespace Survos\ZebraBundle\Print;
 
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
+
 final readonly class PrinterService implements PrinterServiceInterface
 {
+    private LoggerInterface $logger;
+
     public function __construct(
         private PrinterRegistry $printerRegistry,
+        ?LoggerInterface $logger = null,
     ) {
+        $this->logger = $logger ?? new NullLogger();
     }
 
     public function print(string $zpl, ?string $printerName = null): void
     {
-        $printer = null === $printerName ? $this->printerRegistry->getDefault() : $this->printerRegistry->get($printerName);
-        $payload = $this->withZplModeGuard($zpl);
+        $this->printLabel($zpl, $printerName);
+    }
 
+    public function printLabel(string $zplBody, ?string $printerName = null): void
+    {
+        $printer = null === $printerName ? $this->printerRegistry->getDefault() : $this->printerRegistry->get($printerName);
+        $payload = $this->withZplModeGuard($this->wrapLabel($zplBody, $printer));
+
+        $this->logPayload($printer, $payload);
+        $this->send($printer, $payload);
+    }
+
+    public function testLabel(?string $printerName = null): void
+    {
+        $printer = null === $printerName ? $this->printerRegistry->getDefault() : $this->printerRegistry->get($printerName);
+        $payload = sprintf(
+            "^XA\n^PW%d\n^LL%d\n^FO20,20^A0N,30,30^FDHELLO^FS\n^XZ\n",
+            $printer->printWidthDots(),
+            $printer->labelLengthDots(),
+        );
+        $payload = $this->withZplModeGuard($payload);
+
+        $this->logPayload($printer, $payload);
+        $this->send($printer, $payload);
+    }
+
+    public function calibrate(?string $printerName = null, int $settleSeconds = 3): void
+    {
+        $printer = null === $printerName ? $this->printerRegistry->getDefault() : $this->printerRegistry->get($printerName);
+        $payload = "^XA^JC^XZ\n";
+
+        $this->logPayload($printer, $payload);
+        $this->send($printer, $payload);
+
+        if ($settleSeconds > 0) {
+            sleep($settleSeconds);
+        }
+    }
+
+    public function saveSettings(?string $printerName = null): void
+    {
+        $printer = null === $printerName ? $this->printerRegistry->getDefault() : $this->printerRegistry->get($printerName);
+        $payload = sprintf(
+            "^XA\n^PW%d\n^LL%d\n^JUS\n^XZ\n",
+            $printer->printWidthDots(),
+            $printer->labelLengthDots(),
+        );
+
+        $this->logPayload($printer, $payload);
+        $this->send($printer, $payload);
+    }
+
+    private function send(PrinterDefinition $printer, string $payload): void
+    {
         match ($printer->type) {
             'tcp' => $this->printToTcp($printer, $payload),
             'cups' => $this->printToCups($printer, $payload),
@@ -24,6 +82,27 @@ final readonly class PrinterService implements PrinterServiceInterface
             'null' => null,
             default => throw new \RuntimeException(sprintf('Zebra printer type "%s" is not implemented yet.', $printer->type)),
         };
+    }
+
+    private function wrapLabel(string $zpl, PrinterDefinition $printer): string
+    {
+        $body = trim($zpl);
+        $body = preg_replace('/^\^XA\^SZ2\^XZ\s*/', '', $body) ?? $body;
+
+        if (str_starts_with($body, '^XA')) {
+            $body = substr($body, 3);
+        }
+
+        if (str_ends_with($body, '^XZ')) {
+            $body = substr($body, 0, -3);
+        }
+
+        return sprintf(
+            "^XA\n^PW%d\n^LL%d\n%s\n^XZ\n",
+            $printer->printWidthDots(),
+            $printer->labelLengthDots(),
+            trim($body),
+        );
     }
 
     private function printToTcp(PrinterDefinition $printer, string $zpl): void
@@ -131,6 +210,21 @@ final readonly class PrinterService implements PrinterServiceInterface
     private function withZplModeGuard(string $zpl): string
     {
         return "^XA^SZ2^XZ\n" . ltrim($zpl);
+    }
+
+    private function logPayload(PrinterDefinition $printer, string $payload): void
+    {
+        $this->logger->debug('Sending Zebra ZPL payload.', [
+            'printer' => $printer->name,
+            'type' => $printer->type,
+            'dpi' => $printer->dpi,
+            'label_width_in' => $printer->labelWidthInches,
+            'label_height_in' => $printer->labelHeightInches,
+            'print_width_dots' => $printer->printWidthDots(),
+            'label_length_dots' => $printer->labelLengthDots(),
+            'bytes' => strlen($payload),
+            'zpl' => $payload,
+        ]);
     }
 
     /**

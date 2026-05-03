@@ -17,6 +17,24 @@ final readonly class PrinterDefinition
         public ?string $device = null,
         public ?string $vendorId = null,
         public ?string $productId = null,
+        public int $dpi = 203,
+        public float $labelWidthInches = 4.0,
+        public float $labelHeightInches = 2.0,
     ) {
+    }
+
+    public function printWidthDots(): int
+    {
+        return $this->inchesToDots($this->labelWidthInches);
+    }
+
+    public function labelLengthDots(): int
+    {
+        return $this->inchesToDots($this->labelHeightInches);
+    }
+
+    private function inchesToDots(float $inches): int
+    {
+        return (int) round($inches * $this->dpi);
     }
 }

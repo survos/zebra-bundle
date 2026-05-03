@@ -1,20 +1,36 @@
 # Zebra GK420d Reliable Printing
 
-This note documents the failure mode that made a GK420d print blank labels and
-`|______|`, and the deployment pattern currently used by depot.
+This note documents the failure modes that made a GK420d print blank labels and
+the deployment pattern currently used by depot.
 
 ## Root Cause
 
-The printer entered a non-ZPL interpreter state, likely line or diagnostic mode.
-That was the real failure. Transport debugging was misleading because the printer
-was not interpreting ZPL correctly, so several otherwise reasonable transport tests
-looked broken too.
+The recurring blank-label bug was a media-width mismatch. A GK420d ships with a
+stored print width of 832 dots, roughly 4 inches at 203 dpi. When narrower stock
+is loaded, such as 2.25 x 1.25 inch labels, a ZPL job that does not explicitly
+set `^PW` and `^LL` can place content outside the physical label. The printer
+receives and parses the job, feeds a label, and silently prints into the gap.
+
+The printer can also enter a non-ZPL interpreter state, likely line or diagnostic
+mode. Keep the interpreter guard, but treat media dimensions as part of every
+print job.
 
 Symptoms:
 
-- blank labels for ZPL, EPL, and SGD commands;
-- `|______|` output after hardware button actions;
+- blank or partial labels even though the label feeds;
+- output after hardware button actions that indicates non-ZPL mode;
 - print jobs that looked successful from Linux but produced no useful label.
+
+## Media Diagnostic
+
+For 2.25 x 1.25 inch labels at 203 dpi, force the media dimensions in the job:
+
+```bash
+printf '%s' '^XA^PW457^LL254^FO20,20^A0N,30,30^FDHELLO^FS^XZ' > /dev/usb/lp0
+```
+
+If `HELLO` appears, transport and ZPL parsing are working. The prior blank label
+was caused by missing or wrong `^PW`/`^LL`.
 
 ## Recovery
 
@@ -24,7 +40,8 @@ Factory reset the printer from hardware:
 2. Hold Feed while powering on.
 3. Release Feed at 4 flashes.
 
-That reset restored the interpreter to ZPL.
+That reset restores the interpreter to ZPL if the printer is in the wrong mode.
+It does not remove the need for per-job media dimensions.
 
 ## Depot Architecture
 
@@ -53,6 +70,9 @@ survos_zebra:
     zebra:
       type: cups
       queue: zebra
+      dpi: 203
+      label_width_in: 2.25
+      label_height_in: 1.25
   default_printer: zebra
 ```
 
@@ -72,15 +92,18 @@ Before every label payload, force the printer back to ZPL mode:
 ^XA^SZ2^XZ
 ```
 
-Then send the label:
+Then send the label with explicit print width and label length:
 
 ```zpl
 ^XA
+^PW457
+^LL254
 ...label content...
 ^XZ
 ```
 
-Depot prepends the guard before sending ZPL jobs.
+Depot prepends the guard before sending ZPL jobs. The bundle also injects `^PW`
+and `^LL` from the configured printer profile.
 
 Equivalent CLI smoke test:
 
@@ -107,6 +130,21 @@ Optional health check:
 
 If no configuration label prints, the printer is probably not interpreting ZPL.
 
+Bundle health check:
+
+```php
+$printerService->testLabel('zebra');
+```
+
+This emits a small `HELLO` label using the configured `dpi`, `label_width_in`, and
+`label_height_in`.
+
+New-media calibration:
+
+```php
+$printerService->calibrate('zebra');
+```
+
 ## Avoid
 
 Avoid encoding the wrong lesson:
@@ -114,7 +152,9 @@ Avoid encoding the wrong lesson:
 - do not treat CUPS as the fix for a bad printer reset;
 - do not make the web app responsible for printer hardware access;
 - do not assume blank labels mean the ZPL template is wrong;
-- assuming interpreter state is persistent across failures.
+- do not rely on opaque printer-stored `^PW` and `^LL` defaults;
+- do not casually persist `^JUS` settings in multi-printer deployments;
+- do not assume interpreter state is persistent across failures.
 
 ## Mental Model
 
@@ -124,6 +164,7 @@ The printer has three independent layers:
 2. interpreter: ZPL, EPL, line, diagnostic;
 3. media and calibration.
 
-This failure was at the interpreter layer. The `^XA^SZ2^XZ` guard makes each print
-job reassert ZPL before sending the label. Transport still needs to be validated
-on the actual depot machine.
+The width-mismatch failure sits at the media layer. The `^XA^SZ2^XZ` guard makes
+each print job reassert ZPL before sending the label. The `^PW` and `^LL` commands
+make each print job independent of printer-stored media defaults. Transport still
+needs to be validated on the actual depot machine.

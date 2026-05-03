@@ -16,7 +16,12 @@ final readonly class PrinterRegistry
      *   path?: string|null,
      *   device?: string|null,
      *   vendor_id?: string|null,
-     *   product_id?: string|null
+     *   product_id?: string|null,
+     *   dpi?: int,
+     *   label_width_in?: float|int,
+     *   label_height_in?: float|int,
+     *   width_inches?: float|int,
+     *   height_inches?: float|int
      * }> $printers
      */
     public function __construct(
@@ -53,6 +58,9 @@ final readonly class PrinterRegistry
             $config['device'] ?? null,
             $config['vendor_id'] ?? null,
             $config['product_id'] ?? null,
+            (int) ($config['dpi'] ?? 203),
+            (float) ($config['label_width_in'] ?? $config['width_inches'] ?? 4.0),
+            (float) ($config['label_height_in'] ?? $config['height_inches'] ?? 2.0),
         );
     }
 }

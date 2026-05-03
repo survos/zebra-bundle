@@ -43,9 +43,15 @@ survos_zebra:
     zebra:
       type: cups
       queue: zebra
+      dpi: 203
+      label_width_in: 2.25
+      label_height_in: 1.25
     spool:
       type: file
       path: '%kernel.project_dir%/var/zpl'
+      dpi: 203
+      label_width_in: 2.25
+      label_height_in: 1.25
   default_printer: zebra
 ```
 
@@ -59,6 +65,41 @@ The print service automatically prepends the ZPL interpreter guard:
 ```zpl
 ^XA^SZ2^XZ
 ```
+
+It also wraps each label with the configured media dimensions:
+
+```zpl
+^XA
+^PW457
+^LL254
+...label body...
+^XZ
+```
+
+Do not rely on printer-stored defaults for print width or label length. A GK420d
+defaults to a 4 inch print width, so narrower stock can produce blank or partial
+labels when content lands outside the physical media. Configure each printer
+profile with `dpi`, `label_width_in`, and `label_height_in`; the bundle converts
+inches to dots with:
+
+```text
+dots = inches * dpi
+```
+
+Common 203 dpi sizes:
+
+| Label size | `^PW` | `^LL` |
+| --- | ---: | ---: |
+| 2.25 x 1.25 in | 457 | 254 |
+| 2.25 x 1 in | 457 | 203 |
+| 4 x 6 in | 812 | 1218 |
+| 4 x 2 in | 812 | 406 |
+| 3 x 1 in | 609 | 203 |
+
+`PrinterServiceInterface::testLabel()` prints a small known-good label using the
+configured dimensions. `calibrate()` sends `^XA^JC^XZ` for new media. `saveSettings()`
+persists `^PW` and `^LL` with `^JUS`, but should be treated as an advanced
+single-printer setup command; normal jobs remain explicit per print.
 
 ## Twig Usage
 
