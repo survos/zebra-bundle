@@ -66,7 +66,7 @@ final class SurvosZebraBundle extends AbstractBundle
                     ->useAttributeAsKey('name')
                     ->arrayPrototype()
                         ->children()
-                            ->enumNode('type')->values(['tcp', 'cups', 'browserprint', 'file', 'null', 'usb'])->defaultValue('tcp')->end()
+                            ->enumNode('type')->values(['tcp', 'cups', 'file', 'null', 'usb'])->defaultValue('tcp')->end()
                             ->scalarNode('host')->defaultNull()->end()
                             ->integerNode('port')->defaultValue(9100)->end()
                             ->floatNode('timeout')->defaultValue(5.0)->end()

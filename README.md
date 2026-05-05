@@ -4,9 +4,10 @@ Symfony bundle for Zebra ZPL preview and printing workflows.
 
 ## Status
 
-This repository is currently a scaffold based on `PLAN.md`.
+This bundle is small and focused: it previews Zebra ZPL through Labelary and
+sends print jobs through common server-side transports.
 
-Implemented so far:
+Current features:
 
 - `SurvosZebraBundle` using `AbstractBundle`
 - In-bundle service registration without `services.php`
@@ -14,6 +15,9 @@ Implemented so far:
 - Twig extension with `zpl_preview()` support
 - Optional Twig component for label preview
 - TCP, CUPS, file, USB, and null print transports
+
+BrowserPrint/client-side USB support is intentionally not part of the current
+server-side bundle surface.
 
 ## Configuration
 
@@ -123,4 +127,13 @@ You can override the configured default size per component render:
 
 ```twig
 <twig:Zebra:Preview :zpl="zpl" labelSize="gk420d_2_25x1_25" />
+```
+
+## Verification
+
+This repository includes a dependency-light smoke test for the bundle primitives:
+
+```bash
+php smoke-test.php
+composer validate --strict
 ```
