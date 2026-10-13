@@ -182,11 +182,7 @@ final readonly class PrinterService implements PrinterServiceInterface
         if ($bytes < strlen($zpl) || 0 !== $exitCode) {
             $output = trim(implode("\n", array_filter([$stdout ?: null, $stderr ?: null])));
 
-            throw new \RuntimeException(sprintf(
-                'CUPS failed to print Zebra payload on queue "%s"%s.',
-                $printer->queue,
-                $output !== '' ? ': ' . $output : '',
-            ));
+            throw new \RuntimeException(sprintf('CUPS failed to print Zebra payload on queue "%s"%s.', $printer->queue, '' !== $output ? ': '.$output : ''));
         }
     }
 
@@ -198,7 +194,7 @@ final readonly class PrinterService implements PrinterServiceInterface
 
         $targetPath = $printer->path;
         if (is_dir($targetPath)) {
-            $targetPath = rtrim($targetPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . sprintf('zebra-%s.zpl', date('Ymd-His'));
+            $targetPath = rtrim($targetPath, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.sprintf('zebra-%s.zpl', date('Ymd-His'));
         }
 
         $bytes = @file_put_contents($targetPath, $zpl);
@@ -209,7 +205,7 @@ final readonly class PrinterService implements PrinterServiceInterface
 
     private function withZplModeGuard(string $zpl): string
     {
-        return "^XA^SZ2^XZ\n" . ltrim($zpl);
+        return "^XA^SZ2^XZ\n".ltrim($zpl);
     }
 
     private function logPayload(PrinterDefinition $printer, string $payload): void

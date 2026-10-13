@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Survos\ZebraBundle;
 
 use Survos\ZebraBundle\LabelSize\LabelSizeRegistry;
-use Survos\ZebraBundle\Print\PrinterRegistry;
-use Survos\ZebraBundle\Print\PrinterService;
-use Survos\ZebraBundle\Print\PrinterServiceInterface;
 use Survos\ZebraBundle\Preview\LabelaryClient;
 use Survos\ZebraBundle\Preview\PreviewService;
 use Survos\ZebraBundle\Preview\PreviewServiceInterface;
+use Survos\ZebraBundle\Print\PrinterRegistry;
+use Survos\ZebraBundle\Print\PrinterService;
+use Survos\ZebraBundle\Print\PrinterServiceInterface;
 use Survos\ZebraBundle\Twig\Components\PreviewComponent;
 use Survos\ZebraBundle\Twig\ZebraExtension;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
@@ -90,7 +90,7 @@ final class SurvosZebraBundle extends AbstractBundle
         if ($builder->hasExtension('twig')) {
             $builder->prependExtensionConfig('twig', [
                 'paths' => [
-                    \dirname(__DIR__) . '/templates' => 'SurvosZebra',
+                    \dirname(__DIR__).'/templates' => 'SurvosZebra',
                 ],
             ]);
         }

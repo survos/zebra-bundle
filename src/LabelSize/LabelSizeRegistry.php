@@ -72,6 +72,7 @@ final readonly class LabelSizeRegistry
 
     /**
      * @param array<string, array{width_inches: float|int, height_inches: float|int, dpmm?: int, description?: string|null}> $customLabelSizes
+     *
      * @return array<string, LabelSizeDefinition>
      */
     public static function buildDefinitions(

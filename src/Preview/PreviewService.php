@@ -22,7 +22,7 @@ final readonly class PreviewService implements PreviewServiceInterface
             return $this->labelaryClient->render($request);
         }
 
-        $item = $this->cache->getItem('zebra_preview_' . $request->cacheKey());
+        $item = $this->cache->getItem('zebra_preview_'.$request->cacheKey());
         if ($item->isHit()) {
             /** @var array{content: string, mimeType: string, warnings: list<string>} $payload */
             $payload = $item->get();

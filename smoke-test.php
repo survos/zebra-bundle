@@ -3,21 +3,16 @@
 declare(strict_types=1);
 
 use Survos\ZebraBundle\LabelSize\LabelSizeRegistry;
+use Survos\ZebraBundle\Preview\PreviewRequest;
 use Survos\ZebraBundle\Print\PrinterRegistry;
 use Survos\ZebraBundle\Print\PrinterService;
-use Survos\ZebraBundle\Preview\PreviewRequest;
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
 function assertSameValue(mixed $expected, mixed $actual, string $message): void
 {
     if ($expected !== $actual) {
-        throw new RuntimeException(sprintf(
-            '%s Expected %s, got %s.',
-            $message,
-            var_export($expected, true),
-            var_export($actual, true),
-        ));
+        throw new RuntimeException(sprintf('%s Expected %s, got %s.', $message, var_export($expected, true), var_export($actual, true)));
     }
 }
 
@@ -29,7 +24,7 @@ assertSameValue(1.25, $gk420d?->heightInches, 'GK420d height should be registere
 $request = new PreviewRequest('^XA^FO20,20^FDHello^FS^XZ', 2.25, 1.25);
 assertSameValue(32, strlen($request->cacheKey()), 'Preview cache key should use xxh128.');
 
-$spoolDir = sys_get_temp_dir() . '/survos-zebra-smoke-' . bin2hex(random_bytes(4));
+$spoolDir = sys_get_temp_dir().'/survos-zebra-smoke-'.bin2hex(random_bytes(4));
 if (!mkdir($spoolDir) && !is_dir($spoolDir)) {
     throw new RuntimeException(sprintf('Unable to create smoke-test spool directory "%s".', $spoolDir));
 }
@@ -46,7 +41,7 @@ $registry = new PrinterRegistry([
 
 (new PrinterService($registry))->printLabel('^FO20,20^A0N,30,30^FDHELLO^FS');
 
-$files = glob($spoolDir . '/*.zpl') ?: [];
+$files = glob($spoolDir.'/*.zpl') ?: [];
 assertSameValue(1, count($files), 'File printer should write one spool file.');
 
 $payload = file_get_contents($files[0]);
